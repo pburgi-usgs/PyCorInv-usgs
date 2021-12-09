@@ -1,24 +1,19 @@
 
-# coding: utf-8
-
-# In[4]:
-
 
 import os
 import glob
 import numpy as np
-#from ipynb.fs.full.corinvfuncs import *
 
-
-# In[6]:
 
 
 #### USER INPUT ####
 
 # Example 
-poli='_VH'
-paramsnpy = '/data/pmb229/isce/Somalia/T145/params.npy'
-bbox = '8.65 10.85 46.6 49.28' # NEED TO CHANGE BBOX FOR EACH FRAME 
+poli='_VV'
+pol = poli
+paramsnpy  = '/home/pburgi/anchorage/sentinel/p131f388/params.npy'
+# bbox = '8.65 10.85 46.6 49.28' # NEED TO CHANGE BBOX FOR EACH FRAME 
+bbox = '60.995 61.674 -150.786 -148.911' # NEED TO CHANGE BBOX FOR EACH FRAME 
 r = 4  # rlooks
 a = 4  # alooks
 
@@ -30,13 +25,17 @@ a = 4  # alooks
 wd     = os.getcwd()
 params = np.load(paramsnpy, allow_pickle=True).item()
 locals().update(params)
-get_ipython().run_line_magic('run', 'decide_ints_stack.ipynb')
+
+
+if poli == '_VV':
+    slcdir = slcdir_vv
+else:
+    slcdir = slcdir_vh
 
 geodir = workdir+'geo'+poli+'/'
 resdir = workdir+'results_dates'+poli+'/'
 
 
-# In[7]:
 
 
 # define function 
@@ -49,38 +48,39 @@ def geocoder(file,pol,resdir,bbox,dem,geodir):
     
     command = 'imageMath.py -e \'a\' -o '+ tmpfile +' --a=\'' + resfile+';' + str(newnx)+';float;1;BSQ\''
 
-    get_ipython().system(' $command')
-    get_ipython().system(' cp $resfile tmpfile')
+    os.system(command)
+    os.system('cp ' + resfile + ' ' + tmpfile)
     
-    command = 'geocodeIsce.py -f '+tmpfile+' -b \''+ str(bbox)+'\' -d '+dem+' -m '+workdir+'master -s '+workdir+'master -r '+str(rlooks)+' -a '+str(alooks)
-    get_ipython().system(' $command')
+    command = 'geocodeIsce.py -f '+tmpfile+' -b \''+ str(bbox)+'\' -d '+dem+' -m '+workdir+'reference -s '+workdir+'reference -r '+str(rlks)+' -a '+str(alks)
+    os.system(command)
     
     command = 'chmod 777 '+ tmpfile + '*'
-    get_ipython().system(' $command')
+    os.system(command)
     
     command = 'mv '+tmpfile +'.geo ' + resfile + '.geo'
-    get_ipython().system(' $command')
+    os.system(command)
     command = 'mv '+tmpfile +'.geo.xml ' + resfile + '.geo.xml'
-    get_ipython().system(' $command')
+    os.system(command)
     command = 'mv '+tmpfile +'.geo.vrt ' + resfile + '.geo.vrt'
-    get_ipython().system(' $command')
+    os.system(command)
     
     command = 'fixImageXml.py -i '+resfile+'.geo -b'
-    get_ipython().system(' $command')
+    os.system(command)
     
     os.chdir(workdir)
-    
 
 
-# In[8]:
+
+
 
 
 if not os.path.isdir(geodir):
     print('creating directory '+geodir)
-    get_ipython().system(' mkdir $geodir')
+    os.system(' mkdir ' + geodir)
 
 
-# In[11]:
+
+
 
 
 filelist  = glob.glob(resdir + '*cor')
@@ -93,11 +93,11 @@ for i in range(nfiles):
     else:
         geocoder(file,pol,resdir,bbox,dempath,geodir)
         command = 'mv '+filelist[i]+'.geo*'+ ' '+geodir
-        get_ipython().system(' $command')
+        os.system(command)
         
 
 
-# In[12]:
+
 
 
 if os.path.isfile(geodir+'rows.geo'):
@@ -105,7 +105,7 @@ if os.path.isfile(geodir+'rows.geo'):
 else:
     rowfile = resdir+'rows'
     fid = open(rowfile, 'w')
-    get_ipython().system(' chmod 777 $rowfile')
+    os.system(' chmod 777 ' + rowfile)
     for i in range(1,newny+1):
         rs  = np.ones((1,newnx)).flatten()*i
         rs  = rs.astype('float32')
@@ -113,28 +113,29 @@ else:
     fid.close()
     geocoder('rows','',resdir,bbox,dempath,geodir)
     command = 'mv '+rowfile+'.geo* '+geodir
-    get_ipython().system(' $command')
+    os.system(command)
     
 if os.path.isfile(geodir+'cols.geo'):
     print('cols already geocoded')
 else:
     colfile = resdir+'cols'
     fid2 = open(colfile, 'w')
-    get_ipython().system(' chmod 777 $colfile')
+    os.system(' chmod 777 ' + colfile)
     for i in range(newny):
         rs2  = np.array(list(range(1,newnx+1))).astype('float32')
         rs2.tofile(fid2)
     fid2.close()
     geocoder('cols','',resdir,bbox,dempath,geodir)
     command = 'mv '+colfile+'.geo* '+geodir
-    get_ipython().system(' $command')
+    os.system(command)
 
 if os.path.isfile(resdir+'tmp'):
     command ='rm '+resdir+'tmp*'
-    get_ipython().system(' $command')
+    os.system(command)
 
 
-# In[13]:
+
+
 
 
 # start code look_geo.m
@@ -150,7 +151,9 @@ nx_geo = int(l1[qs[0]+1:qs[1]])
 ny_geo = int(l1[qs[2]+1:qs[3]])
 
 
-# In[14]:
+
+
+
 
 
 files  = glob.glob(resdir + '*.cor')
@@ -175,35 +178,37 @@ for j in files:
         fido.close()
         
         command = 'gdal_translate '+oldfile+'.vrt '+oldfile+'.tif'
-        get_ipython().system(' $command')
+        os.system(command)
         
         command = 'looks.py -i '+oldfile+' -o '+newfile+' -r '+str(r)+' -a '+str(a)
-        get_ipython().system(' $command')
+        os.system(command)
         command = 'chmod 777 *'
-        get_ipython().system(' $command')
+        os.system(command)
     else:
         print('already looked down '+newfile)
         
 os.chdir(workdir)
 
 
-# In[15]:
+
+
+
 
 
 # geocode lon/lat radar files 
 
-lonfileold=workdir+'merged/geom_master/lon.rdr.full';
-latfileold=workdir+'merged/geom_master/lat.rdr.full';
-lonfilenew=workdir+'merged/geom_master/lon.rdr.4alks_15rlks.full'
-latfilenew=workdir+'merged/geom_master/lat.rdr.4alks_15rlks.full'
+lonfileold=workdir+'merged/geom_reference/lon.rdr.full';
+latfileold=workdir+'merged/geom_reference/lat.rdr.full';
+lonfilenew=workdir+'merged/geom_reference/lon.rdr.4alks_15rlks.full'
+latfilenew=workdir+'merged/geom_reference/lat.rdr.4alks_15rlks.full'
 
 command = 'looks.py -i '+lonfileold+' -o '+lonfilenew+' -r '+str(rlks)+' -a '+str(alks)
-get_ipython().system(' $command')
+os.system(command)
 command = 'looks.py -i '+latfileold+' -o '+latfilenew+' -r '+str(rlks)+' -a '+str(alks)
-get_ipython().system(' $command')
+os.system(command)
 
 
-# In[16]:
+
 
 
 os.chdir(wd)

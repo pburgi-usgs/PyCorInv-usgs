@@ -1,56 +1,6 @@
+# This code saves parameters that are used in the coherence inversion. 
 
-# coding: utf-8
-
-# # Prior to running this code: 
-# 
-# 
-# ### -Download Sentinel-1 data from, e.g., ASF Vertex
-# 
-# 
-# 
-# 
-# ### -Download DEM, e.g.: 
-# 
-#     dem.py -a download -c -b 18 21 54 57  -r -s 3
-#     
-#     dem.py -a stitch -b 18 21 54 57  -r -s 3 -l -k -c
-#     
-#     fixImageXml.py -i demLat_N18_N21_Lon_E054_E057.dem.wgs84 -f
-# 
-# 
-# 
-# 
-# ### -Run ISCE to co-register SLCs, e.g.: 
-# 
-#     stackSentinel.py -s ./data -o ./isce/precise/ -a ./isce/aux_cal/ -w ./slcs/ -d ./dem/demLat_N18_N21_Lon_E054_E057.dem.wgs84 -c 1 -n '1' -O 1 -m 20180502 -b '19.19 19.20 55.39 55.4' -r 1 -z 1 -W slc
-#  
-#      
-#   
-#  
-# ### -Run all files in run_files directory: 
-# 
-#     chmod 777 run_files/* 
-#     
-#     create executable file "run_run_files", with ./run_1_unpack_slc_topo_master; ./run_2_average_baseline... 
-#     
-#     run: ./run_run_files
-#     
-#     
-# ### - Re-run ISCE for VH 
-# 
-#     run "doVH.pl" in workdir 
-#     
-#     chmod 777 run_files_vh/* 
-#     
-#     create executable file "run_run_files_vh", with ./run_1_unpack_slc_topo_master; ./run_7_geo2rdr_resample... 
-#     
-#     run: ./run_run_files_vh
-#     
-#     WHEN FINISHED, run: mv merged/SLC merged/SLC_VH
-
-# In[1]:
-
-
+# import libraries 
 import os
 import glob
 import xml.etree.ElementTree as ET
@@ -58,15 +8,16 @@ from datetime import date
 import numpy as np
 
 
-# In[2]:
+
+
 
 
 #### INPUTS #### 
 
 # Example inputs:
 # Sentinel-1 T145
-workdir   = '/data/pmb229/isce/Somalia/T145/'
-dempath   = workdir+'dem/demLat_N08_N11_Lon_E046_E050.dem.wgs84'
+workdir   = '/home/pburgi/anchorage/sentinel/p131f388/'
+dempath   = workdir + 'dem/NEDtif/stitched.dem'
 mergeddir = workdir + 'merged/'
 slcdir_vv = workdir + 'merged/' + 'SLC_VV/'
 slcdir_vh = workdir + 'merged/' + 'SLC_VH/'
@@ -78,7 +29,7 @@ wd     = os.getcwd()
 os.chdir(workdir)
 
 
-# In[3]:
+
 
 
 #### Define date variables ####
@@ -107,7 +58,8 @@ dn = np.asarray(dn)
 dn0 = dn-dn[0] # make relative to first date
 
 
-# In[4]:
+
+
 
 
 #### Define track number #### 
@@ -134,13 +86,13 @@ tnidx3 =  xmlstr2.find('<')
 tracknum = xmlstr2[tnidx2+1:tnidx3]
 
 
-# In[5]:
+
 
 
 #### Define nx, ny #### 
 
 # get first IW1 xml file 
-flist = glob.glob(workdir + 'merged/geom_master/' + 'lon.rdr.hdr')
+flist = glob.glob(workdir + 'merged/geom_reference/' + 'lon.rdr.hdr')
 
 iw1 = flist[0]
 # load it
@@ -156,9 +108,10 @@ alks = 4
 rlks = 15
 newnx = str(int(float(nx)/rlks))
 newny = str(int(float(ny)/alks))
+n = alks*rlks
 
 
-# In[6]:
+
 
 
 #### Retrieve baselines #### 
@@ -185,8 +138,53 @@ for f in flist:
     bpmean.append(np.mean(bpall))  
     
 
+###### do vv and vh specific things ######
 
-# In[7]:
+
+filenames = list()
+for f in dates: 
+    fn = slcdir_vv+f+'/'+f+'.slc.full'
+    filenames.append(fn)
+
+id1 = list()
+id2 = list()
+for i in range(len(dn)):
+    for j in range(i,len(dn)):
+        if [j] == [i]:
+            pass
+        else:
+            id1.append(i)
+            id2.append(j)
+
+ids = tuple(zip(id1,id2))
+
+# get diags
+id2_2 = [i-1 for i in id2]
+id1e = enumerate(id1)
+id2e = enumerate(id2_2)
+diags=list()
+for i,j in zip(id1e, id2e): 
+    if i == j:
+        diags.append(i[0])
+
+ni     = len(id1);
+
+dn1 = [dn[i] for i in id1]
+dn2 = [dn[i] for i in id2]
+intdt = np.diff(dn)
+
+# vv_params    = dict()
+# vv_params['filenames'] =  filenames
+# vv_params['id1'] =  id1
+# vv_params['id2'] =  id2
+# vv_params['ids'] =  ids
+# vv_params['diags'] =  diags
+# vv_params['ni'] =  ni
+# vv_params['dn1'] =  dn1
+# vv_params['dn2'] =  dn2
+# vv_params['intdt'] =  intdt
+
+
 
 
 #### Define and write params.npy ####
@@ -199,34 +197,44 @@ params['nd'] =           nd
 params['lam'] =          lam
 params['alks'] =         alks
 params['rlks'] =         rlks
-params['ny'] =           ny
-params['nx'] =           nx
-params['newnx'] =        newnx
-params['newny'] =        newny
+params['n'] =            n
+params['ny'] =           int(ny)
+params['nx'] =           int(nx)
+params['newnx'] =        int(newnx)
+params['newny'] =        int(newny)
 params['dempath']   =    dempath
 params['workdir'] =      workdir
 params['mergeddir'] =    mergeddir
 params['slcdir_vv'] =    slcdir_vv
 params['slcdir_vh'] =    slcdir_vh
 params['baselines'] =    bpmean
+params['id1']       =    id1
+params['id2']       =    id2
+params['ids']       =    ids
+params['diags']     =    diags
+params['ni']        =    ni
+params['dn1']       =    dn1
+params['dn2']       =    dn2
+params['intdt']     =    intdt
 
 # Save the dictionary
 np.save('params.npy',params)
 
 
-# In[8]:
+
+
 
 
 #### Finally, make sure to fix xmls of all SLCs ####
 for i in dates:
     f = slcdir_vv+i+'/'+i+'.slc.full.xml'
-    get_ipython().system(' fixImageXml.py -i $f -f  ')
+    os.system(' fixImageXml.py -i ' + f + ' -f  ')
+    
 for i in dates:
     f = slcdir_vh+i+'/'+i+'.slc.full.xml'
-    get_ipython().system(' fixImageXml.py -i $f -f  ')
+    os.system(' fixImageXml.py -i ' + f + ' -f  ')
 
 
-# In[ ]:
 
 
 os.chdir(wd)

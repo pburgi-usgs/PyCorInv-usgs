@@ -1,43 +1,53 @@
-
-# coding: utf-8
-
-# In[ ]:
-
-
 # 02-cor-inversion
 
 
-# In[1]:
+
 
 
 import os
 import numpy as np
 import cmath
-from ipynb.fs.full.corinvfuncs import *
+from corinvfuncs import *
 import time
 
 
-# In[2]:
+
 
 
 #### INPUT REQUIRED ####
 
-poli       = '_VH'
-paramsnpy  = '/data/pmb229/isce/Somalia/T145/params.npy'
+pol       = '_VV'
+paramsnpy  = '/home/pburgi/anchorage/sentinel/p131f388/params.npy'
 # Shape of window used for coherence determination, 0=triangle, 1=box car, 2=Gaussian
 windowtype = 0
+
+
+
+
+
 
 
 # load params, decide ints 
 params = np.load(paramsnpy, allow_pickle=True).item()
 locals().update(params)
-get_ipython().run_line_magic('run', 'decide_ints_stack.ipynb')
+
+if pol == '_VV':
+    slcdir = slcdir_vv
+else:
+    slcdir = slcdir_vh
+
+
+
+
 wd     = os.getcwd()
 
 print('nx:', nx, ' ny:',ny)
 
 
-# In[3]:
+
+
+
+
 
 
 #### Define variables needed in inversion ####
@@ -46,8 +56,8 @@ bpr  = [baselines[i]-baselines[j] for i,j in zip(id1,id2)]
 abpr = [abs(i) for i in bpr]
 bpw  = 200; #weights for baseline estimation
 
-rx        = rlooks;
-ry        = alooks;
+rx        = rlks;
+ry        = alks;
 
 rangevec  = list(range(1,int(newnx)+1))
 rangevec  = np.array([i*rx-np.floor(rx/2)-1 for i in rangevec])
@@ -67,7 +77,9 @@ mncor    = errslope/(1+errslope);
 mncorl   = np.log(mncor);
 
 
-# In[4]:
+
+
+
 
 
 # Window types
@@ -90,7 +102,9 @@ windy=windy/np.sum(windy);
 ry=np.floor(len(windy)/2);
 
 
-# In[ ]:
+
+
+
 
 
 # Open all slcs
@@ -101,7 +115,10 @@ for i in dates:
     fidi.append(open(f, 'r'))
 
 
-# In[ ]:
+
+
+
+
 
 
 # Make results directory
@@ -109,10 +126,14 @@ for i in dates:
 adir     = workdir+'results_dates'+pol+'/'
 if not os.path.isdir(adir):
     print('creating directory '+adir)
-    get_ipython().system(' mkdir $adir')
+    os.system('mkdir ' + adir)
 
 
-# In[6]:
+
+
+
+
+
 
 
 # Open all result files 
@@ -148,10 +169,14 @@ else:
     fid1 = open(adir+'rms.cor', 'w')
     fidmin = open(adir+'cmin.cor', 'w')
     chmodfiles = adir+'*'
-    get_ipython().system(' chmod 666 $chmodfiles')
+    os.system(' chmod 666 ' + chmodfiles)
 
 
-# In[5]:
+
+
+
+
+
 
 
 # Define design matrices 
@@ -168,7 +193,10 @@ for i in range(ni):
 Gr = Gr0[:,1:]
 
 
-# In[ ]:
+
+
+
+
 
 
 #### START INVERSION ####
@@ -180,6 +208,10 @@ for j in range(online,int(newny)):
         readl    = ry
         startbit = 0
         starty   = 0
+    elif j == int(newny-1):
+        readl    = ry;
+        starty   = (j)*ry-np.ceil(ry/2);
+        startbit = starty*nx*8; 
     else:
         readl    = ry*2+1;
         starty   = (j)*ry-np.ceil(ry/2);
@@ -198,6 +230,10 @@ for j in range(online,int(newny)):
             nana[:,:] = np.nan
             cpx       = np.concatenate((cpx,nana), axis=1)
         elif j == 0:
+            nana      = np.zeros((int(nx),int(ry+1)))
+            nana[:,:] = np.nan
+            cpx       = np.concatenate((cpx, nana), axis=1)
+        elif j == int(newny-1):
             nana      = np.zeros((int(nx),int(ry+1)))
             nana[:,:] = np.nan
             cpx       = np.concatenate((cpx, nana), axis=1)
@@ -377,7 +413,10 @@ for i in range(nd):
     fidr[i].close()
 
 
-# In[ ]:
+
+
+
+
 
 
 os.chdir(wd)

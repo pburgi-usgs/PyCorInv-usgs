@@ -1,7 +1,4 @@
 
-# coding: utf-8
-
-# In[ ]:
 
 
 #### NOTE ####
@@ -9,13 +6,8 @@
 # 02-cor-inversion, 03-geocode_looks_all, plot_inv_results
 
 
-# In[10]:
-
 
 import numpy as np
-
-
-# In[11]:
 
 
 # functions
@@ -29,16 +21,20 @@ def decidepol(poli):
 def decideproject(paramspny): 
     params = np.load(paramsnpy).item()
     return params
-    
 
 
-# In[1]:
 
+pol    = decidepol(poli)
+params = decideproject(paramsnpy)
+locals().update(params)
 
-get_ipython().run_cell_magic('capture', '', "# uncomment above line if you would like the 'params' dictionary printed to the screen.\n\npol    = decidepol(poli)\nparams = decideproject(paramsnpy)\nlocals().update(params)\n\n\nnewnx  = int(newnx)\nnewny  = int(newny)\nnx     = int(nx)\nny     = int(ny)\n\nif pol == '_VV': \n    slcdir = slcdir_vv\nelse: \n    slcdir = slcdir_vh\n        \nprint(params)")
+if pol == '_VV':
+    slcdir = slcdir_vv
+else:
+    slcdir = slcdir_vh
+        
+print(params)
 
-
-# In[13]:
 
 
 
@@ -48,7 +44,7 @@ for f in dates:
     filenames.append(fn)
 
 
-# In[5]:
+
 
 
 id1 = list()
@@ -77,8 +73,4 @@ ni     = len(id1);
 dn1 = [dn[i] for i in id1]
 dn2 = [dn[i] for i in id2]
 intdt = np.diff(dn)
-
-alooks = alks
-rlooks = rlks
-n      = rlooks*alooks;
 
